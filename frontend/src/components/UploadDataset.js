@@ -142,7 +142,7 @@ export default function UploadDataset({ onUploadSuccess, modelType }) {
             onClick={handleUpload}
             disabled={isUploading}
           >
-            {isUploading ? 'Processing Model...' : 'Run SVR Prediction'}
+            {isUploading ? 'Processing Model...' : `Run ${modelType.toUpperCase()} Prediction`}
           </button>
         </div>
       )}

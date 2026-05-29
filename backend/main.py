@@ -91,18 +91,39 @@ async def predict_batch(
     
     # 3. Make Prediction
     try:
-        predictions_log = model.predict(X)
-        # Model dilatih menggunakan np.log1p, jadi kita kembalikan menggunakan np.expm1
-        predictions_rp = np.expm1(predictions_log)
+        predictions_raw = model.predict(X)
+        
+        # SVR dilatih menggunakan np.log1p, jadi kita kembalikan menggunakan np.expm1
+        # Random Forest tampaknya memprediksi harga asli (Rupiah), jadi jangan di-expm1
+        if model_key == 'SVR':
+            predictions_rp = np.expm1(predictions_raw)
+            predictions_for_eval = predictions_raw
+        else:
+            predictions_rp = predictions_raw
+            predictions_for_eval = predictions_raw
+
+        # Ganti nilai tak terhingga (inf/nan) dengan 0 agar JSON tidak crash (jaga-jaga)
+        predictions_rp = np.nan_to_num(predictions_rp, posinf=0.0, neginf=0.0)
+        
         prediction_results = predictions_rp.tolist()
         
         # Hitung Evaluasi jika harga asli ada di dataset
         evaluation_metrics = None
-        if 'price_in_rp' in df.columns:
-            y_true_rp = df['price_in_rp'].values
+        target_col = None
+        for col in ['price_in_rp', 'price', 'Price', 'harga', 'Harga', 'Sale_Price', 'Sale_Price_USD', 'Resale_Price', 'Resale_Price_USD', 'Profit_Margin_USD', 'Retail_Price_USD']:
+            if col in df.columns:
+                target_col = col
+                break
+                
+        if target_col:
+            y_true_rp = df[target_col].values
             
-            # R2 Score pada log (sama seperti di Jupyter Notebook user)
-            r2 = r2_score(np.log1p(y_true_rp), predictions_log)
+            # R2 Score (SVR butuh log, RF pakai raw)
+            if model_key == 'SVR':
+                r2 = r2_score(np.log1p(y_true_rp), predictions_for_eval)
+            else:
+                r2 = r2_score(y_true_rp, predictions_for_eval)
+            
             # MAE pada harga asli (Rupiah)
             mae = mean_absolute_error(y_true_rp, predictions_rp)
             
@@ -203,8 +224,14 @@ async def predict_manual(
                     df_new[col] = None
         
         # Prediksi
-        predictions_log = model.predict(df_new)
-        predictions_rp = np.expm1(predictions_log)
+        predictions_raw = model.predict(df_new)
+        
+        if model_key == 'SVR':
+            predictions_rp = np.expm1(predictions_raw)
+        else:
+            predictions_rp = predictions_raw
+            
+        predictions_rp = np.nan_to_num(predictions_rp, posinf=0.0, neginf=0.0)
         
         # Ekstrak manual calculation (Sederhana)
         manual_calculation = {

@@ -11,8 +11,13 @@ export default function ResultSVR({ resultData, modelType = 'svr' }) {
   const { dataset_details, predictions, manual_calculation, evaluation_metrics } = resultData;
   const maxRows = predictions ? predictions.length : dataset_details.row_count;
 
+  const isUSD = modelType === 'rf';
+
   const formatNumber = (num) => {
-    return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(num);
+    if (isUSD) {
+      return '$ ' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(num);
+    }
+    return 'Rp ' + new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(num);
   };
 
   const handleRowChange = (e) => {
@@ -30,7 +35,7 @@ export default function ResultSVR({ resultData, modelType = 'svr' }) {
   return (
     <div className="results-container">
       {evaluation_metrics && (
-        <ModelEvaluation metrics={evaluation_metrics} />
+        <ModelEvaluation metrics={evaluation_metrics} modelType={modelType} />
       )}
 
       <div className="glass-card">
@@ -81,7 +86,7 @@ export default function ResultSVR({ resultData, modelType = 'svr' }) {
                   {dataset_details.columns.map((col, idx) => (
                     <th key={idx}>{col}</th>
                   ))}
-                  <th style={{ color: 'var(--success)', whiteSpace: 'nowrap' }}>✨ Prediksi Harga (Rp)</th>
+                  <th style={{ color: 'var(--success)', whiteSpace: 'nowrap' }}>✨ Prediksi Harga ({isUSD ? 'USD' : 'Rp'})</th>
                 </tr>
               </thead>
               <tbody>
@@ -104,7 +109,7 @@ export default function ResultSVR({ resultData, modelType = 'svr' }) {
       <div className="glass-card" style={{ marginTop: '2rem' }}>
         <h2 className="section-title">📈 Penjelasan Perhitungan Manual {modelType.toUpperCase()}</h2>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-          Bagaimana model menghasilkan prediksi <strong>Rp {rowPrediction ? formatNumber(rowPrediction) : 0}</strong> pada baris ke-{selectedRow} tersebut? Berikut adalah rahasia dapur perhitungan matematisnya.
+          Bagaimana model menghasilkan prediksi <strong>{rowPrediction ? formatNumber(rowPrediction) : 0}</strong> pada baris ke-{selectedRow} tersebut? Berikut adalah rahasia dapur perhitungan matematisnya.
         </p>
 
         {manual_calculation && (
